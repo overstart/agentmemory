@@ -31,7 +31,13 @@ import { summaryFingerprint, summaryObservations } from "./summary-state.js";
 // LLM call. Default ≈ 50k input tokens per chunk at ~110 tok/obs — fits
 // comfortably in 128k-window models. Override via SUMMARIZE_CHUNK_SIZE.
 const CHUNK_SIZE_DEFAULT = 400;
-export const SUMMARY_TIMEOUT_MS = 120_000;
+// 慢推理模型（如火山 ark-code-latest，200-obs chunk 实测 ~116s）在默认
+// 120s 全局预算内跑不完全部并发 chunk；允许经 env 放宽，默认值保持不变
+const SUMMARY_TIMEOUT_DEFAULT_MS = 120_000;
+function getSummaryTimeoutMs(): number {
+  const n = Number.parseInt(process.env.SUMMARIZE_TIMEOUT_MS ?? "", 10);
+  return Number.isFinite(n) && n > 0 ? n : SUMMARY_TIMEOUT_DEFAULT_MS;
+}
 // Concurrent chunk calls share the summary deadline. Increase this for
 // large sessions only when the configured provider supports the load.
 const CHUNK_CONCURRENCY_DEFAULT = 6;
@@ -264,6 +270,7 @@ export function registerSummarizeFunction(
   const lockPrefix = `summary:${randomUUID()}`;
   const summarize = async (data: { sessionId: string; force?: boolean } | undefined) => {
       const startMs = Date.now();
+      const summaryTimeoutMs = getSummaryTimeoutMs();
       if (!data || typeof data.sessionId !== "string" || !data.sessionId.trim()) {
         return { success: false, error: "sessionId is required" };
       }
@@ -320,7 +327,7 @@ export function registerSummarizeFunction(
         name: provider.name,
         compress: (system, prompt) => provider.compress(system, prompt),
         summarize: async (system, prompt) => {
-          const remaining = SUMMARY_TIMEOUT_MS - (Date.now() - startMs);
+          const remaining = summaryTimeoutMs - (Date.now() - startMs);
           if (remaining <= 0) throw new Error("summary_timeout");
           let timer: ReturnType<typeof setTimeout> | undefined;
           try {
