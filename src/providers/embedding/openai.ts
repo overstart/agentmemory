@@ -12,6 +12,28 @@ import { resolveDimensions } from "./_dimensions.js";
 
 const DEFAULT_MODEL = "text-embedding-3-small";
 
+// Optional process-wide throttle for strict per-account embedding rate limits
+// (e.g. Volcengine coding plan rejects startup backfill bursts with 429 while
+// sequential calls at 60 rpm succeed). Serializes every batch and enforces a
+// minimum gap between request starts. shortcut: only active when the env var is set
+let embGate: Promise<void> = Promise.resolve();
+let lastEmbStart = 0;
+async function embeddingGate(): Promise<void> {
+  const minMs =
+    parseInt(getEnvVar("OPENAI_EMBEDDING_MIN_INTERVAL_MS") || "0", 10) || 0;
+  // Disabled by default: bypass the chain entirely so ordinary users pay no
+  // serialization cost (reads the env per call, so the knob is live without
+  // rebuilding the provider).
+  if (minMs <= 0) return;
+  const run = embGate.then(async () => {
+    const wait = lastEmbStart + minMs - Date.now();
+    if (wait > 0) await new Promise((r) => setTimeout(r, wait));
+    lastEmbStart = Date.now();
+  });
+  embGate = run.catch(() => {});
+  return run;
+}
+
 export class OpenAIEmbeddingProvider implements EmbeddingProvider {
   readonly name = "openai";
   readonly dimensions: number;
@@ -59,6 +81,7 @@ export class OpenAIEmbeddingProvider implements EmbeddingProvider {
   }
 
   async embedBatch(texts: string[]): Promise<Float32Array[]> {
+    await embeddingGate();
     const url = buildEmbeddingUrl(
       this.baseUrl,
       this.isAzure,

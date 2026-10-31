@@ -155,6 +155,36 @@ describe("OpenAIEmbeddingProvider", () => {
       /OPENAI_EMBEDDING_DIMENSIONS must be a positive integer/,
     );
   });
+
+  it("spaces concurrent batch starts when OPENAI_EMBEDDING_MIN_INTERVAL_MS is set", async () => {
+    process.env["OPENAI_EMBEDDING_MIN_INTERVAL_MS"] = "80";
+    const provider = new OpenAIEmbeddingProvider("test-key");
+    const starts: number[] = [];
+    const fetchSpy = vi.spyOn(globalThis, "fetch").mockImplementation(
+      async () => {
+        starts.push(Date.now());
+        await new Promise((r) => setTimeout(r, 5));
+        return new Response(
+          JSON.stringify({ data: [{ embedding: [0.1, 0.2] }] }),
+          { status: 200 },
+        );
+      },
+    );
+
+    await Promise.all([
+      provider.embedBatch(["a"]),
+      provider.embedBatch(["b"]),
+      provider.embedBatch(["c"]),
+    ]);
+
+    expect(starts).toHaveLength(3);
+    // 80 ms configured; leave slack for timer scheduling
+    expect(starts[1] - starts[0]).toBeGreaterThanOrEqual(65);
+    expect(starts[2] - starts[1]).toBeGreaterThanOrEqual(65);
+
+    delete process.env["OPENAI_EMBEDDING_MIN_INTERVAL_MS"];
+    fetchSpy.mockRestore();
+  });
 });
 
 describe("withDimensionGuard", () => {
