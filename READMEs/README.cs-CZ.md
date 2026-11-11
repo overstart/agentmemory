@@ -69,7 +69,7 @@
   <picture><source media="(prefers-color-scheme: dark)" srcset="../assets/tags/light/stat-tools.svg"><img src="../assets/tags/stat-tools.svg" alt="54 MCP nástrojů" height="38" /></picture>
   <picture><source media="(prefers-color-scheme: dark)" srcset="../assets/tags/light/stat-hooks.svg"><img src="../assets/tags/stat-hooks.svg" alt="12 automatických hooks" height="38" /></picture>
   <picture><source media="(prefers-color-scheme: dark)" srcset="../assets/tags/light/stat-deps.svg"><img src="../assets/tags/stat-deps.svg" alt="0 externích databází" height="38" /></picture>
-  <picture><source media="(prefers-color-scheme: dark)" srcset="../assets/tags/light/stat-tests.svg"><img src="../assets/tags/stat-tests.svg" alt="4,400+ testů úspěšně proběhlo" height="38" /></picture>
+  <picture><source media="(prefers-color-scheme: dark)" srcset="../assets/tags/light/stat-tests.svg"><img src="../assets/tags/stat-tests.svg" alt="4,700+ testů úspěšně proběhlo" height="38" /></picture>
 </p>
 
 <p align="center">
@@ -446,7 +446,7 @@ Install agentmemory: run `npx -y @agentmemory/agentmemory@latest` in a separate 
 
 #### Claude Code bez instalace pluginu (cesta MCP-standalone)
 
-Pokud zapojíte server MCP agentmemory přímo přes `~/.claude.json` místo použití `/plugin install`, Claude Code nikdy nevyřeší `${CLAUDE_PLUGIN_ROOT}` a musíte nasměrovat skripty hooks na absolutní cesty v `~/.claude/settings.json`. Tyto cesty typicky obsahují verzi agentmemory (např. `~/.codex/plugins/cache/agentmemory/agentmemory/0.9.22/scripts/…`), takže další upgrade tiše rozbije všechny hooks.
+Pokud zapojíte server MCP agentmemory přímo přes `~/.claude.json` (výchozí cesta) místo použití `/plugin install`, Claude Code nikdy nevyřeší `${CLAUDE_PLUGIN_ROOT}` a musíte nasměrovat skripty hooks na absolutní cesty v `~/.claude/settings.json` (výchozí cesta). Tyto cesty typicky obsahují verzi agentmemory (např. `~/.codex/plugins/cache/agentmemory/agentmemory/0.9.22/scripts/…`), takže další upgrade tiše rozbije všechny hooks.
 
 Řešení:
 
@@ -454,7 +454,9 @@ Pokud zapojíte server MCP agentmemory přímo přes `~/.claude.json` místo pou
 agentmemory connect claude-code --with-hooks
 ```
 
-Toto sloučí stejné příkazy hooks do `~/.claude/settings.json` s absolutními cestami vyřešenými na balíčený adresář `plugin/` aktuálně nainstalovaného balíčku `@agentmemory/agentmemory`. Po upgradu agentmemory příkaz spusťte znovu, aby se cesty obnovily. Uživatelské položky ve stejném souboru zůstanou zachovány; nahrazeny jsou pouze předchozí položky agentmemory. Doporučovaným přístupem zůstává cesta přes `/plugin install`.
+Tento příkaz nastaví server MCP a sloučí přibalené hooky do uživatelské konfigurace Claude Code. Pokud `CLAUDE_CONFIG_DIR` není nastavena, je prázdná nebo obsahuje pouze bílé znaky, použije pro MCP soubor `~/.claude.json` a pro hooky `~/.claude/settings.json`. Ostatní hodnoty adresáře se používají přesně tak, jak byly zadány, včetně úvodních a koncových bílých znaků. Chcete-li použít vlastní adresář, nastavte pro tento příkaz i Claude Code stejnou neprázdnou hodnotu `CLAUDE_CONFIG_DIR`; MCP pak použije `$CLAUDE_CONFIG_DIR/.claude.json` a hooky `$CLAUDE_CONFIG_DIR/settings.json`. Claude Code musí tuto hodnotu obdržet ve svém spouštěcím prostředí, i když ji konektor načítá ze souboru `.env` AgentMemory. Vlastní adresář vytvořte před spuštěním tohoto příkazu; jinak konektor Claude Code nerozpozná a přeskočí jej. Pokud hodnota v shellu obsahuje pouze bílé znaky, před spuštěním Claude Code zrušte nastavení `CLAUDE_CONFIG_DIR`, aby také použil výchozí profil. Použijte absolutní cestu. Relativní cesty se vyhodnocují vůči pracovnímu adresáři, takže oba příkazy musí být spuštěny ze stejného adresáře.
+
+Příkazy hooků používají absolutní cesty do adresáře `plugin/` přibaleného v nainstalovaném balíčku. Po aktualizaci agentmemory spusťte příkaz znovu, aby se tyto cesty obnovily. Uživatelské položky v konfiguračních souborech zůstanou zachovány; nahradí se pouze předchozí položky agentmemory. Doporučeným postupem zůstává `/plugin install`.
 Pro vzdálená nebo chráněná nasazení spusťte Claude Code s nastaveným `AGENTMEMORY_URL` a `AGENTMEMORY_SECRET`. Plugin obě hodnoty předá svému zabalenému serveru MCP; když je `AGENTMEMORY_URL` prázdné, shim MCP použije `http://localhost:3111`.
 
 ### Codex CLI (platforma pluginů Codex)
@@ -663,7 +665,7 @@ npm install && npm run build && npm start
 
 ### Windows
 
-agentmemory běží na Windows 10/11. WSL2 používá cestu pro Linux a může pinned engine nainstalovat automaticky. Nativní Windows vyžaduje ručně nainstalovanou binárku iii-engine v0.25.0; stáhněte odpovídající archiv ze [stránky vydání iii v0.25.0](https://github.com/iii-hq/iii/releases/tag/iii%2Fv0.25.0), ověřte kontrolní součet a umístěte `iii.exe` do `PATH` (například `%USERPROFILE%\.local\bin\iii.exe`). CLI ZIP pro Windows automaticky nerozbaluje.
+agentmemory běží na Windows 10/11. WSL2 používá cestu pro Linux a může pinned engine nainstalovat automaticky. Nativní Windows vyžaduje ručně nainstalovanou binárku iii-engine v0.25.1; stáhněte odpovídající archiv ze [stránky vydání iii v0.25.1](https://github.com/iii-hq/iii/releases/tag/iii%2Fv0.25.1), ověřte kontrolní součet a umístěte `iii.exe` do `PATH` (například `%USERPROFILE%\.local\bin\iii.exe`). CLI ZIP pro Windows automaticky nerozbaluje.
 
 Automatizované zapojení MCP na nativním Windows podporuje pouze `agentmemory connect copilot-cli`. U ostatních nativních agentů použijte manuální blok MCP ze sekce [Další agenti](#other-agents). `connect` ve WSL spouštějte pouze tehdy, pokud je cílový agent nainstalován ve stejném prostředí WSL.
 
@@ -1241,7 +1243,7 @@ curl -X POST http://localhost:3111/agentmemory/graph/compact -H "Authorization: 
 ```bash
 npm run dev               # Hot reload
 npm run build             # Production build
-npm test                  # 4,400+ tests
+npm test                  # 4,700+ tests
 npm run test:integration  # API tests (requires running services)
 ```
 
